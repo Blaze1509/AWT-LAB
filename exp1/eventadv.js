@@ -1,122 +1,123 @@
-const EventEmitter = require('events');
-const readline = require('readline');
+// Check if user is logged in
+if (!localStorage.getItem('currentUser')) {
+    window.location.href = 'login.html';
+}
+
+class EventEmitter {
+  constructor() {
+    this.events = {};
+  }
+  
+  on(event, listener) {
+    if (!this.events[event]) {
+      this.events[event] = [];
+    }
+    this.events[event].push(listener);
+  }
+  
+  emit(event, ...args) {
+    if (this.events[event]) {
+      this.events[event].forEach(listener => listener(...args));
+    }
+  }
+}
 
 const emitter = new EventEmitter();
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-let currentUser = null;
-let userEvents = {};
+let currentUser = localStorage.getItem('currentUser');
+let userEvents = JSON.parse(localStorage.getItem('userEvents')) || {};
 
 function track(user, event) {
   if (!userEvents[user]) {
     userEvents[user] = {};
   }
   userEvents[user][event] = (userEvents[user][event] || 0) + 1;
+  localStorage.setItem('userEvents', JSON.stringify(userEvents));
 }
 
 emitter.on('login', (username) => {
   currentUser = username;
   track(username, 'login');
-  console.log(`User ${username} logged in`);
+  log(`User ${username} logged in`);
+  updateCurrentUser();
 });
 
 emitter.on('logout', () => {
   track(currentUser, 'logout');
-  console.log(`User ${currentUser} logged out`);
-  currentUser = null;
+  log(`User ${currentUser} logged out`);
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('userEvents');
+  window.location.href = 'login.html';
 });
 
 emitter.on('purchase', (item) => {
   track(currentUser, 'purchase');
-  console.log(`${currentUser} purchased ${item}`);
+  log(`${currentUser} purchased ${item}`);
 });
 
 emitter.on('update-profile', (newName) => {
   userEvents[newName] = userEvents[currentUser] || {};
   delete userEvents[currentUser];
   currentUser = newName;
+  localStorage.setItem('currentUser', newName);
   track(newName, 'profile-update');
-  console.log(`Username updated to ${newName}`);
+  log(`Username updated to ${newName}`);
+  updateCurrentUser();
 });
 
 emitter.on('summary', () => {
-  console.log('\n--- SUMMARY ---');
+  log('--- SUMMARY ---');
   for (let user in userEvents) {
-    console.log(user);
+    log(user);
     for (let ev in userEvents[user]) {
-      console.log(`  ${ev}: ${userEvents[user][ev]}`);
+      log(`  ${ev}: ${userEvents[user][ev]}`);
     }
   }
-  console.log('---------------\n');
+  log('---------------');
 });
 
-function showMenu() {
-  console.log('\n1. Login');
-  console.log('2. Logout');
-  console.log('3. Purchase');
-  console.log('4. Update Profile');
-  console.log('5. Summary');
-  console.log('6. Exit');
+function log(message) {
+  const output = document.getElementById('output');
+  output.innerHTML += message + '<br>';
 }
 
-function start() {
-  showMenu();
-  rl.question('Choose option: ', (choice) => {
+function updateCurrentUser() {
+  document.getElementById('currentUser').textContent = currentUser || 'None';
+}
 
-    if (choice === '1') {
-      rl.question('Enter username: ', (name) => {
-        emitter.emit('login', name);
-        start();
-      });
+function logout() {
+  emitter.emit('logout');
+}
 
-    } else if (choice === '2') {
-      if (!currentUser) {
-        console.log('No user logged in');
-        start();
-      } else {
-        emitter.emit('logout');
-        start();
-      }
-
-    } else if (choice === '3') {
-      if (!currentUser) {
-        console.log('Login first');
-        start();
-      } else {
-        rl.question('Enter item: ', (item) => {
-          emitter.emit('purchase', item);
-          start();
-        });
-      }
-
-    } else if (choice === '4') {
-      if (!currentUser) {
-        console.log('Login first');
-        start();
-      } else {
-        rl.question('Enter new username: ', (newName) => {
-          emitter.emit('update-profile', newName);
-          start();
-        });
-      }
-
-    } else if (choice === '5') {
-      emitter.emit('summary');
-      start();
-
-    } else if (choice === '6') {
-      console.log('Bye!');
-      rl.close();
-
-    } else {
-      console.log('Invalid choice');
-      start();
+function purchase() {
+  if (!currentUser) {
+    log('Login first');
+  } else {
+    const item = document.getElementById('item').value;
+    if (item) {
+      emitter.emit('purchase', item);
+      document.getElementById('item').value = '';
     }
-  });
+  }
 }
 
-start();
+function updateProfile() {
+  if (!currentUser) {
+    log('Login first');
+  } else {
+    const newName = document.getElementById('newName').value;
+    if (newName) {
+      emitter.emit('update-profile', newName);
+      document.getElementById('newName').value = '';
+    }
+  }
+}
+
+function showSummary() {
+  emitter.emit('summary');
+}
+
+window.onload = function() {
+  updateCurrentUser();
+  emitter.emit('login', currentUser);
+};
