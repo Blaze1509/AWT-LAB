@@ -1,107 +1,106 @@
-const express =require('express');
+const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const FILE ="todos.json";
+const FILE = "todos.json";
 
 const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-function readfile(){
-return new Promise((resolve,reject)=>{
-fs.readFile(FILE,"utf-8",(err,data)=>{
-    if(err){
-        resolve([]);
-        return;
+function readfile() {
+    return new Promise((resolve) => {
+        fs.readFile(FILE, "utf-8", (err, data) => {
+            if (err) {
+                resolve({ users: {} });
+                return;
+            }
+            try {
+                return resolve(data.trim() ? JSON.parse(data) : { users: {} });
+            } catch (parseErr) {
+                return resolve({ users: {} });
+            }
+        });
+    });
+}
+
+function writefile(data) {
+    return new Promise((resolve) => {
+        fs.writeFile(FILE, JSON.stringify(data, null, 2), (err) => {
+            resolve(!err);
+        });
+    });
+}
+
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    const data = await readfile();
+    
+    if (data.users[username] && data.users[username].password === password) {
+        res.json({ success: true });
+    } else {
+        res.json({ success: false, message: 'Invalid username or password' });
     }
-    else{
-      try {
-        return resolve(data.trim() ? JSON.parse(data) : []);
-      } catch (parseErr) {
-        return resolve([]);
-      }
+});
+
+app.get('/listtodos', async (req, res) => {
+    const username = req.query.username;
+    const data = await readfile();
+    const todos = data.users[username]?.todos || [];
+    res.json(todos);
+});
+
+app.post('/addtodo', async (req, res) => {
+    const { todo, username } = req.body;
+    const data = await readfile();
+    
+    if (!data.users[username]) {
+        data.users[username] = { todos: [] };
     }
-})
-})
-}
+    
+    data.users[username].todos.push({ todo, status: "❌" });
+    const success = await writefile(data);
+    
+    res.json({ message: success ? "todo added successfully" : "error occured" });
+});
 
-async function listtodos(_req,res){
-    let list = await readfile();
-    res.json(list);
-}
-
-async function addtodo(req,res) {
-    let val = req.body.todo;
-    let list = await readfile();
-    let demostr = {
-        todo: val,
-        status: "❌"
+app.delete('/deltodo', async (req, res) => {
+    const { todo, username } = req.body;
+    const data = await readfile();
+    
+    const todos = data.users[username]?.todos || [];
+    const index = todos.findIndex((item) => item.todo === todo);
+    
+    if (index !== -1) {
+        todos.splice(index, 1);
+        await writefile(data);
+        res.json({ message: "todo deleted successfully" });
+    } else {
+        res.json({ message: "todo not found" });
     }
-    list.push(demostr);
-    fs.writeFile(FILE,JSON.stringify(list,null,2),(err)=>{ /// null,2 is used for formatizing purpose (adding item , replacer(null) , spacing(2))
-        if(err){
-            console.log(err);
-            res.json({message:"error occured"});
-        }
-        else{
-        console.log("ADDED!!");
-        res.json({message:"todo added successfully"});
-        }
-})
-}
+});
 
-async function deltodo(req,res) {
-    let val = req.body.todo;
-    let list = await readfile();
-    let index = list.findIndex((item)=> item.todo === val); //cant use indexOf here becz its used fr primitives like number,string for complexes like obj use findIndex which always takes func as arg
-    if(index!=-1)
-    list.splice(index,1);
-    fs.writeFile(FILE,JSON.stringify(list,null,2),(err)=>{ /// null,2 is used for formatizing purpose (adding item , replacer(null) , spacing(2))
-        if(err)
-            console.log(err);
-        else
-        if(index == -1){
-            console.log("not found todo u entered!!")
-            res.json({message:"todo not found"});
-        }else{
-        console.log("DELETED!!");
-        res.json({message:"todo deleted successfully"});
-        }
-})
-}
-
-async function marktodo(req,res) {
-    let val = req.body.todo;
-    let list = await readfile();
-    let index = list.findIndex((item)=> item.todo === val);
+app.put('/marktodo', async (req, res) => {
+    const { todo, username } = req.body;
+    const data = await readfile();
+    
+    const todos = data.users[username]?.todos || [];
+    const index = todos.findIndex((item) => item.todo === todo);
+    
     if (index === -1) {
-        console.log("not found todo u entered!!");
         res.json({ message: "todo not found" });
         return;
     }
-    list[index].status="✔️";
-    fs.writeFile(FILE,JSON.stringify(list,null,2),(err)=>{
-        if(err){
-            console.log(err);
-            res.json({message:"error occured"});
-        }
-        else{
-        console.log("Marked!!");
-            res.json({message:"todo marked successfully"});
-    }
-})
-}
+    
+    todos[index].status = "✔️";
+    const success = await writefile(data);
+    
+    res.json({ message: success ? "todo marked successfully" : "error occured" });
+});
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.post('/addtodo',addtodo);
-app.delete('/deltodo',deltodo);
-app.get('/listtodos',listtodos);
-app.put('/marktodo',marktodo);
-
-
-app.listen(3000,()=>{
+app.listen(3000, () => {
     console.log("Server started at port 3000");
-})
+});

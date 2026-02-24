@@ -1,1 +1,21 @@
-[]
+{
+  "users": {
+    "admin": {
+      "password": "admin123",
+      "todos": [
+        {
+          "todo": "sleep",
+          "status": "✔️"
+        },
+        {
+          "todo": "eat",
+          "status": "❌"
+        }
+      ]
+    },
+    "joy": {
+      "password": "joy123",
+      "todos": []
+    }
+  }
+}

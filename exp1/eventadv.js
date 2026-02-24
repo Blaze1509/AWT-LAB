@@ -1,4 +1,3 @@
-// Check if user is logged in
 if (!localStorage.getItem('currentUser')) {
     window.location.href = 'login.html';
 }
