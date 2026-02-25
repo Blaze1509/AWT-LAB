@@ -1,7 +1,14 @@
 [
   {
     "name": "joy",
-    "email": "joypatel1509@gmail.com",
-    "password": "123"
+    "email": "joy@gmail.com",
+    "password": "123",
+    "role": "admin"
+  },
+  {
+    "name": "vanshal",
+    "email": "v@gmail.com",
+    "password": "123",
+    "role": "student"
   }
 ]
