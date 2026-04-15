@@ -10,5 +10,17 @@
     "email": "v@gmail.com",
     "password": "123",
     "role": "student"
+  },
+  {
+    "name": "ac",
+    "email": "ac@gmail.com",
+    "password": "123",
+    "role": "student"
+  },
+  {
+    "name": "joy",
+    "email": "joypatel1509@gmail.com",
+    "password": "joy123",
+    "role": "student"
   }
 ]

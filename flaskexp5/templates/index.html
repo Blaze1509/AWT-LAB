@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Password Generator & Strength Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .container {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 28px;
+      width: 400px;
+    }
+    h2 { margin-bottom: 16px; font-size: 1.2rem; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 20px 0; }
+
+    label { font-size: 0.9rem; }
+    input[type="number"] {
+      width: 60px; padding: 4px 8px;
+      border: 1px solid #ccc; border-radius: 4px;
+      font-size: 0.9rem; margin-left: 8px;
+    }
+    .options { margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+    .options label { display: flex; align-items: center; gap: 6px; }
+
+    input[type="text"] {
+      width: 100%; padding: 8px;
+      border: 1px solid #ccc; border-radius: 4px;
+      font-size: 0.95rem; margin-bottom: 8px;
+    }
+    .password-row { display: flex; gap: 6px; margin: 12px 0; }
+    .password-row input {
+      flex: 1; font-family: monospace;
+      padding: 8px; border: 1px solid #ccc;
+      border-radius: 4px; font-size: 0.95rem;
+      background: #f9f9f9;
+    }
+
+    button {
+      padding: 8px 14px; border: none;
+      border-radius: 4px; cursor: pointer;
+      font-size: 0.9rem; background: #4a90d9;
+      color: #fff;
+    }
+    button:hover { background: #357abd; }
+    #btn-generate { width: 100%; padding: 9px; }
+
+    .bar-wrap {
+      height: 10px; background: #e0e0e0;
+      border-radius: 4px; margin: 10px 0 4px;
+    }
+    #strength-bar {
+      height: 100%; border-radius: 4px;
+      width: 0%; transition: width 0.3s, background 0.3s;
+    }
+    #strength-label { font-size: 0.9rem; font-weight: bold; margin-bottom: 6px; }
+    #suggestions { font-size: 0.82rem; color: #b45309; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h2>🔐 Password Generator</h2>
+
+  <label>Length: <input type="number" id="length" value="12" min="8" max="32"></label>
+
+  <div class="options">
+    <label><input type="checkbox" id="uppercase" checked> Uppercase (A-Z)</label>
+    <label><input type="checkbox" id="numbers"   checked> Numbers (0-9)</label>
+    <label><input type="checkbox" id="symbols"   checked> Symbols (!@#...)</label>
+  </div>
+
+  <button id="btn-generate">Generate Password</button>
+
+  <div class="password-row">
+    <input id="password-display" readonly placeholder="Generated password">
+    <button id="copy-btn">Copy</button>
+  </div>
+
+  <hr>
+
+  <h2>🛡️ Strength Checker</h2>
+  <input type="text" id="check-input" placeholder="Type or paste a password...">
+  <button id="btn-check" style="width:100%">Check Strength</button>
+
+  <div class="bar-wrap"><div id="strength-bar"></div></div>
+  <div id="strength-label"></div>
+  <div id="suggestions"></div>
+
+</div>
+
+<script>
+  const colors = { Weak: "#e53e3e", Medium: "#d97706", Strong: "#38a169" };
+  const widths  = { Weak: "33%", Medium: "66%", Strong: "100%" };
+
+  function showResult({ strength, suggestions }) {
+    document.getElementById("strength-bar").style.width      = widths[strength];
+    document.getElementById("strength-bar").style.background = colors[strength];
+    document.getElementById("strength-label").textContent    = "Strength: " + strength;
+    document.getElementById("strength-label").style.color    = colors[strength];
+    document.getElementById("suggestions").textContent =
+      suggestions.length ? "Tip: " + suggestions.join(" | ") : "Looks good!";
+  }
+
+  document.getElementById("btn-generate").addEventListener("click", async () => {
+    const res = await fetch("/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        length:    document.getElementById("length").value,
+        uppercase: document.getElementById("uppercase").checked,
+        numbers:   document.getElementById("numbers").checked,
+        symbols:   document.getElementById("symbols").checked,
+      })
+    });
+    const data = await res.json();
+    document.getElementById("password-display").value = data.password;
+    document.getElementById("check-input").value = data.password;
+    showResult(data);
+  });
+
+  document.getElementById("btn-check").addEventListener("click", async () => {
+    const password = document.getElementById("check-input").value;
+    if (!password) return;
+    const res = await fetch("/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    showResult(await res.json());
+  });
+
+  document.getElementById("check-input").addEventListener("input", async function () {
+    if (!this.value) return;
+    const res = await fetch("/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: this.value })
+    });
+    showResult(await res.json());
+  });
+
+  document.getElementById("copy-btn").addEventListener("click", () => {
+    const val = document.getElementById("password-display").value;
+    if (val) {
+      navigator.clipboard.writeText(val);
+      document.getElementById("copy-btn").textContent = "Copied!";
+      setTimeout(() => document.getElementById("copy-btn").textContent = "Copy", 1500);
+    }
+  });
+</script>
+</body>
+</html>

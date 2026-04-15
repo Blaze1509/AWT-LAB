@@ -1,13 +1,44 @@
+# ---- Node.js ----
 node_modules/
+package-lock.json
 *.log
+
+# ---- Environment ----
 .env
+.env.*
+
+# ---- exp2 - Todo App (JSON as DB) ----
+exp2/todos.json
+
+# ---- exp3 - Simple Login (JSON as DB) ----
+exp3/Simple-Login/users.json
+
+# ---- Python / Flask ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ---- Django ----
+Djangoexp6/projectt/db.sqlite3
+Djangoexp6/projectt/students.json
+
+# ---- React / Vite ----
+dist/
+.vite/
+
+# ---- OS ----
 .DS_Store
 Thumbs.db
 *.tmp
 *.temp
-dist/
-build/
+
+# ---- IDE ----
 .vscode/
 .idea/
-package-lock.json
-exp2/todos.json

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flask CRUD</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px 16px; }
+    .container { width: 100%; max-width: 700px; }
+    h1 { text-align: center; margin-bottom: 24px; color: #333; }
+
+    .card { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px; }
+    .card h2 { margin-bottom: 16px; font-size: 18px; color: #444; }
+
+    input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    input:focus { outline: none; border-color: #4f46e5; }
+
+    .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #4f46e5; color: #fff; width: 100%; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-edit { background: #f59e0b; color: #fff; padding: 6px 12px; font-size: 12px; }
+    .btn-delete { background: #ef4444; color: #fff; padding: 6px 12px; font-size: 12px; }
+    .btn-edit:hover { background: #d97706; }
+    .btn-delete:hover { background: #dc2626; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #4f46e5; color: #fff; padding: 10px 12px; text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+    tr:hover td { background: #f9f9f9; }
+
+    #msg { text-align: center; margin-bottom: 12px; font-size: 14px; color: green; min-height: 20px; }
+    #msg.error { color: red; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>User Management</h1>
+
+    <div class="card">
+      <h2 id="form-title">Add User</h2>
+      <p id="msg"></p>
+      <input type="hidden" id="user-id" />
+      <input type="text" id="name" placeholder="Full Name" />
+      <input type="email" id="email" placeholder="Email Address" />
+      <button class="btn btn-primary" onclick="submitForm()">Submit</button>
+    </div>
+
+    <div class="card">
+      <h2>All Users</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="user-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const nameEl = document.getElementById("name");
+    const emailEl = document.getElementById("email");
+    const userIdEl = document.getElementById("user-id");
+    const formTitle = document.getElementById("form-title");
+    const msg = document.getElementById("msg");
+
+    async function loadUsers() {
+      const res = await fetch("/users");
+      const users = await res.json();
+      const tbody = document.getElementById("user-table");
+      tbody.innerHTML = users.length === 0
+        ? `<tr><td colspan="4" style="text-align:center;color:#999">No users found</td></tr>`
+        : users.map(u => `
+          <tr>
+            <td>${u.id}</td>
+            <td>${u.name}</td>
+            <td>${u.email}</td>
+            <td>
+              <button class="btn btn-edit" onclick="editUser(${u.id}, '${u.name}', '${u.email}')">Edit</button>
+              <button class="btn btn-delete" onclick="deleteUser(${u.id})">Delete</button>
+            </td>
+          </tr>`).join("");
+    }
+
+    async function submitForm() {
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      const id = userIdEl.value;
+
+      if (!name || !email) { showMsg("Name and email are required.", true); return; }
+
+      const url = id ? `/users/${id}` : "/users";
+      const method = id ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email })
+      });
+
+      if (res.ok) {
+        showMsg(id ? "User updated!" : "User created!");
+        resetForm();
+        loadUsers();
+      } else {
+        const err = await res.json();
+        showMsg(err.error || "Something went wrong.", true);
+      }
+    }
+
+    function editUser(id, name, email) {
+      userIdEl.value = id;
+      nameEl.value = name;
+      emailEl.value = email;
+      formTitle.textContent = "Edit User";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function deleteUser(id) {
+      if (!confirm("Delete this user?")) return;
+      await fetch(`/users/${id}`, { method: "DELETE" });
+      loadUsers();
+    }
+
+    function resetForm() {
+      nameEl.value = "";
+      emailEl.value = "";
+      userIdEl.value = "";
+      formTitle.textContent = "Add User";
+    }
+
+    function showMsg(text, isError = false) {
+      msg.textContent = text;
+      msg.className = isError ? "error" : "";
+      setTimeout(() => msg.textContent = "", 3000);
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>
